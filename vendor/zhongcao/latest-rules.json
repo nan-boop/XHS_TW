@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "updated": "2026-03-26",
+  "changelog": ["v1.0: 初始版本"],
+  "tag_strategy": {
+    "hot_tags": ["好物推荐", "日常分享", "宝藏好物"],
+    "category_examples": ["护肤", "穿搭", "美食", "旅行", "家居"],
+    "pyramid": {
+      "hot": {"count": "2-3", "purpose": "曝光引流"},
+      "vertical": {"count": "2-3", "purpose": "垂直流量"},
+      "audience": {"count": "1-2", "purpose": "精准匹配"},
+      "scene": {"count": "1-2", "purpose": "搜索流量"},
+      "longtail": {"count": "2-3", "purpose": "低竞争"}
+    }
+  },
+  "sensitive_words": [],
+  "title_rules": {
+    "max_length": 20,
+    "must_have_emoji": true,
+    "use_second_person": true
+  },
+  "paragraph_rules": {
+    "max_lines_per_paragraph": 3,
+    "emoji_frequency": "every 2-3 sentences"
+  }
+}

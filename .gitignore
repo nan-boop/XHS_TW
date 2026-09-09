@@ -1,0 +1,31 @@
+# Python caches and local build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Local environments and dependency trees
+.venv/
+venv/
+node_modules/
+dist/
+build/
+
+# Local login/session material and runtime output
+*.dpapi
+*.session
+*.cookie
+*.sqlite
+*.db
+*.log
+.env
+.env.*
+creator-session*
+xhs_login_panel_qr/
+qr_codes/
+
+# Operating-system/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

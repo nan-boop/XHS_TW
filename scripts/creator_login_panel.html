@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creator 登录</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f5f7; color: #202124; }
+    main { width: min(92vw, 440px); padding: 28px; background: #fff; border: 1px solid #dadce0; border-radius: 8px; box-shadow: 0 8px 24px #20212414; }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    p { margin: 0; color: #5f6368; line-height: 1.5; }
+    .status { margin: 22px 0; padding: 12px 14px; border-left: 3px solid #1a73e8; background: #f8fafd; }
+    .status[data-kind="success"] { border-color: #188038; background: #f4fbf6; }
+    .status[data-kind="error"] { border-color: #d93025; background: #fff7f6; }
+    .actions, .form { display: grid; gap: 12px; }
+    .actions { grid-template-columns: 1fr 1fr; }
+    button { min-height: 42px; border: 0; border-radius: 6px; padding: 0 16px; font: inherit; cursor: pointer; background: #1a73e8; color: white; }
+    button.secondary { background: #e8f0fe; color: #174ea6; }
+    button:disabled { cursor: wait; opacity: .55; }
+    label { display: grid; gap: 6px; font-size: 14px; color: #3c4043; }
+    input { box-sizing: border-box; width: 100%; height: 42px; border: 1px solid #bdc1c6; border-radius: 6px; padding: 0 12px; font: inherit; }
+    input:focus { outline: 2px solid #8ab4f8; border-color: #1a73e8; }
+    .qr { display: grid; justify-items: center; gap: 10px; margin: 12px 0 20px; }
+    .qr img { width: 260px; height: 260px; image-rendering: pixelated; border: 1px solid #dadce0; }
+    .muted { font-size: 12px; color: #80868b; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Creator 登录</h1>
+    <p>登录过程在本机完成，登录凭据不会显示在页面或写入浏览器存储。</p>
+    <div id="status" class="status" data-kind="info" aria-live="polite">尚未开始</div>
+
+    <div class="actions">
+      <button id="phoneStart" type="button">手机号登录</button>
+      <button id="qrStart" class="secondary" type="button">二维码登录</button>
+    </div>
+
+    <form id="phoneForm" class="form" hidden>
+      <label>手机号
+        <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="20" required>
+      </label>
+      <button type="submit">发送验证码</button>
+    </form>
+
+    <form id="codeForm" class="form" hidden>
+      <label>短信验证码
+        <input id="code" name="code" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required>
+      </label>
+      <button type="submit">确认登录</button>
+    </form>
+
+    <div id="qrBox" class="qr" hidden>
+      <img id="qrImage" alt="Creator 登录二维码">
+      <span class="muted">请使用小红书 App 扫描，并在手机上确认。</span>
+    </div>
+
+    <div class="actions">
+      <button id="closeSession" class="secondary" type="button" hidden>结束本机会话</button>
+      <button id="forgetSession" class="secondary" type="button" hidden>清除本地登录缓存</button>
+    </div>
+  </main>
+  <script>
+    const uiToken = "__UI_TOKEN__";
+    const statusEl = document.getElementById("status");
+    const phoneForm = document.getElementById("phoneForm");
+    const codeForm = document.getElementById("codeForm");
+    const qrBox = document.getElementById("qrBox");
+    const qrImage = document.getElementById("qrImage");
+    const phoneStart = document.getElementById("phoneStart");
+    const qrStart = document.getElementById("qrStart");
+    const closeSession = document.getElementById("closeSession");
+    const forgetSession = document.getElementById("forgetSession");
+
+    function setStatus(text, kind = "info") {
+      statusEl.textContent = text;
+      statusEl.dataset.kind = kind;
+    }
+
+    async function api(path, options = {}) {
+      const headers = { "X-Local-UI-Token": uiToken, ...(options.headers || {}) };
+      const response = await fetch(path, { ...options, headers });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "请求失败");
+      return data;
+    }
+
+    function refreshControls(state) {
+      const active = state.status === "starting" || state.status === "awaiting_phone" || state.status === "awaiting_code" || state.status === "awaiting_scan";
+      phoneStart.disabled = active || state.authenticated;
+      qrStart.disabled = active || state.authenticated;
+      phoneForm.hidden = state.status !== "awaiting_phone";
+      codeForm.hidden = state.status !== "awaiting_code";
+      qrBox.hidden = state.status !== "awaiting_scan";
+      closeSession.hidden = !state.authenticated;
+      forgetSession.hidden = !state.persistent;
+      if (state.status === "awaiting_scan" && state.qr_available) {
+        qrImage.src = "/api/qr?rev=" + encodeURIComponent(state.qr_revision) + "&token=" + encodeURIComponent(uiToken);
+      }
+      if (state.authenticated) setStatus(state.persistent ? "Creator 登录成功，本机加密会话已保存。" : "Creator 登录成功，会话仅保存在本机进程内。", "success");
+      else if (state.status === "failed") setStatus("登录失败，请重新尝试。", "error");
+      else if (state.status === "awaiting_phone") setStatus("请输入手机号。", "info");
+      else if (state.status === "awaiting_code") setStatus("验证码已发送，请输入验证码。", "info");
+      else if (state.status === "awaiting_scan") setStatus("等待扫码和手机确认。", "info");
+      else if (state.message) setStatus(state.message, "info");
+    }
+
+    async function start(mode) {
+      try { refreshControls(await api("/api/start", { method: "POST", body: JSON.stringify({ mode }) })); }
+      catch (error) { setStatus(error.message, "error"); }
+    }
+
+    phoneStart.addEventListener("click", () => start("phone"));
+    qrStart.addEventListener("click", () => start("qr"));
+    phoneForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const value = document.getElementById("phone").value;
+      document.getElementById("phone").value = "";
+      try { refreshControls(await api("/api/input", { method: "POST", body: JSON.stringify({ kind: "phone", value }) })); }
+      catch (error) { setStatus(error.message, "error"); }
+    });
+    codeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const value = document.getElementById("code").value;
+      document.getElementById("code").value = "";
+      try { refreshControls(await api("/api/input", { method: "POST", body: JSON.stringify({ kind: "code", value }) })); }
+      catch (error) { setStatus(error.message, "error"); }
+    });
+    closeSession.addEventListener("click", async () => {
+      try { refreshControls(await api("/api/close", { method: "POST" })); }
+      catch (error) { setStatus(error.message, "error"); }
+    });
+    forgetSession.addEventListener("click", async () => {
+      try { refreshControls(await api("/api/forget", { method: "POST" })); }
+      catch (error) { setStatus(error.message, "error"); }
+    });
+
+    async function poll() {
+      try { refreshControls(await api("/api/state")); } catch (_) { setStatus("本机登录服务未连接。", "error"); }
+      window.setTimeout(poll, 1500);
+    }
+    poll();
+  </script>
+</body>
+</html>
