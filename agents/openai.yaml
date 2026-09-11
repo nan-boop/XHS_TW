@@ -1,6 +1,6 @@
 interface:
   display_name: "小红书产品图文发布"
-  short_description: "按需登录、整理内容并安全发布，支持保存及定时发布"
-  default_prompt: "使用 $xiaohongshu-publishing，先判断用户意图；登录或检查登录只执行对应操作，发布/定时已有任务先检索本地任务库，创建或补充内容时才按需询问自动/手动/混合配图、文案和产品信息模式；再准备发布预览、保存包或经确认的定时发布任务。"
+  short_description: "按需登录、按文案类型写稿并安全发布，支持保存及定时发布"
+  default_prompt: "使用 $xiaohongshu-publishing。登录成功后用中文说明选项，并把【小红书任务配置】单独放进 text 纯文本代码块高亮发给用户。有定时意向时先按发布时间搜文件夹：用户指定了路径就去指定位置，没指定就去 F:\\注册机\\小红书发布。发布已有任务才跳过这张卡。"
 policy:
   allow_implicit_invocation: true
